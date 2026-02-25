@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Just Imagine</title>
+  <style>
+    :root {
+      --bg: #080810;
+      --surface: #0f0f1a;
+      --lift: #161626;
+      --border: rgba(255,255,255,0.07);
+      --border-h: rgba(255,255,255,0.14);
+      --cream: #f0eee8;
+      --dim: #8b8a99;
+      --mute: #4a4960;
+      --blue: #4f8ef7;
+      --mint: #7fffd4;
+      --gold: #f0c040;
+      --violet: #b49fff;
+      --sans: 'Inter', system-ui, sans-serif;
+      --serif: 'Georgia', 'Times New Roman', serif;
+      --mono: 'JetBrains Mono', 'Fira Code', monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: var(--sans); background: var(--bg); color: var(--cream); height: 100vh; overflow: hidden; cursor: default; }
+
+    /* Layout */
+    .app { display: flex; height: 100vh; }
+    .sidebar { width: 220px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 1.5rem 0; flex-shrink: 0; }
+    .sb-logo { padding: 0 1.2rem 1.5rem; border-bottom: 1px solid var(--border); margin-bottom: .5rem; }
+    .sb-logo-serif { font-family: var(--serif); font-style: italic; font-size: 1.1rem; color: var(--cream); }
+    .sb-logo-hand { font-family: var(--serif); font-style: italic; font-size: 1.1rem; color: var(--mint); margin-left: .3rem; }
+    .sb-label { padding: .3rem 1.2rem; font-size: .65rem; text-transform: uppercase; letter-spacing: .08em; color: var(--mute); margin-top: .5rem; }
+    .sb-item { display: flex; align-items: center; padding: .55rem 1.2rem; font-size: .8rem; color: var(--dim); cursor: pointer; transition: background .12s, color .12s; gap: .6rem; border-radius: 0; position: relative; }
+    .sb-item:hover { background: var(--lift); color: var(--cream); }
+    .sb-item.active { background: rgba(127,255,212,.06); color: var(--mint); }
+    .sb-icon { font-size: .9rem; flex-shrink: 0; }
+    .sb-badge { margin-left: auto; background: var(--lift); border: 1px solid var(--border); border-radius: 10px; font-size: .6rem; padding: .1rem .45rem; color: var(--dim); font-family: var(--mono); }
+    .sb-badge.gold { background: rgba(240,192,64,.1); border-color: rgba(240,192,64,.25); color: var(--gold); }
+    .content { flex: 1; overflow: hidden; position: relative; }
+    .view { position: absolute; inset: 0; overflow-y: auto; display: none; flex-direction: column; opacity: 0; transition: opacity .25s; }
+    .view.active { display: flex; opacity: 1; }
+
+    /* TOP BAR */
+    .topbar { display: flex; align-items: center; justify-content: space-between; padding: .8rem 1.5rem; border-bottom: 1px solid var(--border); background: var(--surface); flex-shrink: 0; }
+    .tb-title { font-family: var(--serif); font-style: italic; font-size: .95rem; color: var(--cream); }
+    .tb-actions { display: flex; align-items: center; gap: .6rem; }
+    .tb-btn { font-size: .72rem; padding: .38rem .9rem; border: 1px solid var(--border); background: transparent; color: var(--dim); border-radius: 1.5rem; cursor: pointer; transition: all .15s; font-family: var(--sans); }
+    .tb-btn:hover { border-color: var(--border-h); color: var(--cream); }
+    .tb-btn-primary { background: var(--blue); border-color: var(--blue); color: #fff; font-weight: 500; }
+    .tb-btn-primary:hover { opacity: .88; }
+    .autonomy-toggle { display: flex; align-items: center; gap: .5rem; font-size: .7rem; color: var(--dim); }
+    .toggle-pill { width: 32px; height: 18px; background: var(--lift); border: 1px solid var(--border); border-radius: 9px; position: relative; cursor: pointer; transition: background .2s; }
+    .toggle-pill.on { background: rgba(127,255,212,.2); border-color: var(--mint); }
+    .toggle-knob { position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--mute); transition: transform .2s, background .2s; }
+    .toggle-pill.on .toggle-knob { transform: translateX(14px); background: var(--mint); }
+
+    /* CREATE VIEW */
+    .create-view { align-items: center; justify-content: center; padding: 3rem 2rem; }
+    .create-center { width: 100%; max-width: 640px; }
+    .create-greeting { text-align: center; margin-bottom: 2.5rem; }
+    .cg-time { font-size: .75rem; color: var(--mute); font-family: var(--mono); letter-spacing: .05em; margin-bottom: .5rem; }
+    .cg-heading { font-family: var(--serif); font-style: italic; font-size: 1.8rem; color: var(--cream); margin-bottom: .4rem; }
+    .cg-sub { font-size: .85rem; color: var(--dim); }
+    .imagine-box { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 1.2rem; transition: border-color .2s; }
+    .imagine-box:focus-within { border-color: rgba(127,255,212,.2); }
+    .imagine-input { width: 100%; background: transparent; border: none; outline: none; font-size: 1rem; color: var(--cream); font-family: var(--serif); font-style: italic; resize: none; min-height: 80px; line-height: 1.6; }
+    .imagine-input::placeholder { color: var(--mute); }
+    .format-row { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: .8rem; padding-top: .8rem; border-top: 1px solid var(--border); }
+    .fmt-chip { padding: .3rem .7rem; border: 1px solid var(--border); border-radius: .8rem; font-size: .7rem; font-family: var(--mono); color: var(--mute); cursor: pointer; transition: all .15s; }
+    .fmt-chip:hover, .fmt-chip.active { border-color: var(--mint); color: var(--mint); background: rgba(127,255,212,.05); }
+    .imagine-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 1rem; }
+    .char-count { font-size: .7rem; color: var(--mute); font-family: var(--mono); }
+    .imagine-btn { padding: .6rem 1.5rem; background: linear-gradient(135deg, #4f8ef7, #7fffd4); border: none; border-radius: 2rem; color: #080810; font-size: .85rem; font-weight: 700; cursor: pointer; transition: opacity .15s; }
+    .imagine-btn:hover { opacity: .88; }
+    .suggestions { margin-top: 1.2rem; display: grid; gap: .5rem; }
+    .sug-item { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: .7rem 1rem; font-size: .8rem; color: var(--dim); cursor: pointer; transition: all .15s; display: flex; align-items: center; gap: .6rem; }
+    .sug-item:hover { border-color: var(--border-h); color: var(--cream); }
+    .sug-icon { font-size: .9rem; }
+    .recent-row { margin-top: 1.5rem; }
+    .recent-label { font-size: .65rem; color: var(--mute); text-transform: uppercase; letter-spacing: .08em; margin-bottom: .6rem; }
+    .recent-items { display: flex; gap: .5rem; flex-wrap: wrap; }
+    .recent-chip { padding: .25rem .65rem; border: 1px solid var(--border); border-radius: 2rem; font-size: .7rem; color: var(--mute); cursor: pointer; }
+    .recent-chip:hover { color: var(--cream); }
+
+    /* RUNNING VIEW */
+    .running-view { flex-direction: column; }
+    .run-header { padding: 1.5rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+    .run-title { font-family: var(--serif); font-style: italic; font-size: 1.1rem; color: var(--cream); }
+    .run-prompt { font-size: .75rem; color: var(--dim); margin-top: .2rem; max-width: 60ch; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .run-timer { font-family: var(--mono); font-size: .8rem; color: var(--mint); }
+    .master-progress { padding: 1rem 1.5rem; flex-shrink: 0; }
+    .mp-track { height: 4px; background: var(--lift); border-radius: 2px; overflow: hidden; margin-bottom: .6rem; }
+    .mp-fill { height: 100%; background: linear-gradient(90deg, #4f8ef7, #7fffd4); transition: width .5s; border-radius: 2px; }
+    .mp-phases { display: flex; gap: .5rem; }
+    .mp-phase { flex: 1; font-size: .6rem; color: var(--mute); font-family: var(--mono); padding: .2rem .5rem; border-radius: .3rem; background: var(--surface); border: 1px solid var(--border); text-align: center; transition: all .3s; }
+    .mp-phase.done { color: var(--mint); border-color: rgba(127,255,212,.2); }
+    .mp-phase.active { color: var(--blue); border-color: rgba(79,142,247,.3); animation: pulse-phase .8s ease-in-out infinite; }
+    @keyframes pulse-phase { 0%,100%{opacity:1} 50%{opacity:.5} }
+    .agents-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; padding: 0 1.5rem 1rem; flex-shrink: 0; }
+    .agent-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; }
+    .agent-card.done { border-color: rgba(127,255,212,.15); }
+    .ac-header { display: flex; align-items: center; gap: .6rem; margin-bottom: .6rem; }
+    .ac-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .ac-name { font-size: .8rem; color: var(--cream); font-weight: 500; }
+    .ac-status { margin-left: auto; font-size: .65rem; font-family: var(--mono); color: var(--mute); }
+    .agent-card.done .ac-status { color: var(--mint); }
+    .ac-track { height: 3px; background: var(--lift); border-radius: 1.5px; overflow: hidden; margin-bottom: .5rem; }
+    .ac-fill { height: 100%; border-radius: 1.5px; transition: width .4s; }
+    .ac-log { font-size: .65rem; font-family: var(--mono); color: var(--mute); display: flex; flex-direction: column; gap: .15rem; }
+    .director-log { flex: 1; overflow-y: auto; padding: 0 1.5rem 1.5rem; }
+    .dl-label { font-size: .65rem; color: var(--mute); text-transform: uppercase; letter-spacing: .08em; margin-bottom: .5rem; }
+    .dl-line { font-size: .72rem; font-family: var(--mono); color: var(--dim); padding: .2rem 0; border-bottom: 1px solid rgba(255,255,255,.03); display: flex; gap: .6rem; }
+    .dl-time { color: var(--mute); flex-shrink: 0; }
+
+    /* OUTPUTS VIEW */
+    .outputs-view { flex-direction: column; padding: 1.5rem; gap: 1rem; }
+    .out-summary { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.2rem; }
+    .os-top { display: flex; align-items: flex-start; gap: 1rem; }
+    .os-icon { font-size: 1.8rem; }
+    .os-title { font-family: var(--serif); font-style: italic; font-size: 1.05rem; color: var(--cream); margin-bottom: .2rem; }
+    .os-prompt { font-size: .78rem; color: var(--dim); line-height: 1.5; }
+    .os-stats { display: flex; gap: 1.5rem; margin-top: .8rem; padding-top: .8rem; border-top: 1px solid var(--border); }
+    .os-stat { font-size: .7rem; color: var(--mute); }
+    .os-stat strong { color: var(--cream); display: block; font-size: .85rem; margin-bottom: .1rem; }
+    .output-files { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; }
+    .of-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; display: flex; flex-direction: column; gap: .6rem; }
+    .of-header { display: flex; align-items: center; gap: .6rem; }
+    .of-icon { font-size: 1.5rem; }
+    .of-name { font-size: .82rem; color: var(--cream); font-weight: 500; }
+    .of-format { font-size: .68rem; font-family: var(--mono); padding: .15rem .4rem; border-radius: .3rem; border: 1px solid; }
+    .fmt-pptx .of-format { color: var(--blue); border-color: rgba(79,142,247,.3); background: rgba(79,142,247,.06); }
+    .fmt-mp4 .of-format { color: #ef4444; border-color: rgba(239,68,68,.3); background: rgba(239,68,68,.06); }
+    .fmt-pdf .of-format { color: var(--gold); border-color: rgba(240,192,64,.3); background: rgba(240,192,64,.06); }
+    .fmt-mp3 .of-format { color: var(--mint); border-color: rgba(127,255,212,.3); background: rgba(127,255,212,.06); }
+    .fmt-docx .of-format { color: var(--violet); border-color: rgba(180,159,255,.3); background: rgba(180,159,255,.06); }
+    .of-desc { font-size: .72rem; color: var(--dim); }
+    .of-actions { display: flex; gap: .4rem; margin-top: auto; }
+    .of-btn { flex: 1; padding: .35rem; font-size: .68rem; border: 1px solid var(--border); background: transparent; color: var(--dim); border-radius: .4rem; cursor: pointer; transition: all .15s; }
+    .of-btn:hover { border-color: var(--border-h); color: var(--cream); }
+    .of-btn.primary { background: rgba(79,142,247,.1); border-color: rgba(79,142,247,.3); color: var(--blue); }
+    .of-btn.primary:hover { background: rgba(79,142,247,.18); }
+    .agent-strip { display: flex; gap: .5rem; }
+    .as-chip { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: .6rem .8rem; display: flex; align-items: center; gap: .5rem; }
+    .as-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .as-name { font-size: .7rem; color: var(--dim); font-family: var(--serif); font-style: italic; }
+    .as-status { font-family: var(--mono); font-size: .55rem; color: var(--mint); }
+
+    /* NOTIFICATION */
+    .notif { position: fixed; bottom: 1.5rem; right: 1.5rem; background: var(--surface); border: 1px solid rgba(127,255,212,.25); border-radius: 10px; padding: .9rem 1.2rem; display: flex; align-items: center; gap: .8rem; transform: translateY(80px); opacity: 0; transition: transform .35s, opacity .35s; z-index: 900; max-width: 300px; }
+    .notif.show { transform: translateY(0); opacity: 1; }
+    .notif-icon { font-size: 1.1rem; flex-shrink: 0; }
+    .notif-title { font-size: .78rem; color: var(--cream); font-family: var(--serif); font-style: italic; }
+    .notif-sub { font-size: .65rem; color: var(--mute); margin-top: .1rem; font-family: var(--mono); }
+  </style>
+</head>
+<body>
+<div class="app">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sb-logo">
+      <span class="sb-logo-serif">Just</span>
+      <span class="sb-logo-hand">Imagine</span>
+    </div>
+    <nav>
+      <div class="sb-label">Workspace</div>
+      <div class="sb-item active" data-view="create">
+        <span class="sb-icon">✦</span> New Creation
+      </div>
+      <div class="sb-item" data-view="running">
+        <span class="sb-icon">⟳</span> Running Now
+        <span class="sb-badge">1</span>
+      </div>
+      <div class="sb-item" data-view="outputs">
+        <span class="sb-icon">◫</span> My Outputs
+        <span class="sb-badge gold">4</span>
+      </div>
+      <div class="sb-label" style="margin-top:.5rem">Tools</div>
+      <div class="sb-item"><span class="sb-icon">🔍</span> Research</div>
+      <div class="sb-item"><span class="sb-icon">🤖</span> Autonomy</div>
+      <div class="sb-item"><span class="sb-icon">🎨</span> Style</div>
+    </nav>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <div class="content">
+
+    <!-- CREATE VIEW -->
+    <div class="view active create-view" id="view-create">
+      <div class="create-center">
+        <div class="create-greeting">
+          <div class="cg-time" id="cg-time"></div>
+          <div class="cg-heading">What will you imagine?</div>
+          <div class="cg-sub">Describe anything. SuperCool builds it — text, visuals, slides, video, music.</div>
+        </div>
+
+        <div class="imagine-box">
+          <textarea class="imagine-input" id="imagine-input" placeholder="A 10-slide pitch deck for my AI startup with cinematic product visuals and a financial model..." rows="4"></textarea>
+          <div class="format-row" id="format-row">
+            <div class="fmt-chip active" data-format="auto">Auto</div>
+            <div class="fmt-chip" data-format=".pptx">.pptx</div>
+            <div class="fmt-chip" data-format=".pdf">.pdf</div>
+            <div class="fmt-chip" data-format=".mp4">.mp4</div>
+            <div class="fmt-chip" data-format=".docx">.docx</div>
+            <div class="fmt-chip" data-format=".mp3">.mp3</div>
+          </div>
+          <div class="imagine-footer">
+            <span class="char-count" id="char-count">0 chars</span>
+            <button class="imagine-btn" id="imagine-btn">Imagine It ✦</button>
+          </div>
+        </div>
+
+        <div class="suggestions">
+          <div class="sug-item" data-prompt="A 10-slide pitch deck for a space tourism startup with investor financials and dramatic visuals">
+            <span class="sug-icon">🚀</span> Space tourism pitch deck with financials
+          </div>
+          <div class="sug-item" data-prompt="A 3-minute cinematic product launch video for a new AI-powered smartwatch">
+            <span class="sug-icon">🎬</span> 3-minute product launch video for a smartwatch
+          </div>
+          <div class="sug-item" data-prompt="A lo-fi hip-hop track with rain ambience and jazz piano for a study session playlist">
+            <span class="sug-icon">🎵</span> Lo-fi hip-hop study track with jazz piano
+          </div>
+        </div>
+
+        <div class="recent-row">
+          <div class="recent-label">Recent</div>
+          <div class="recent-items">
+            <div class="recent-chip">Brand guide PDF</div>
+            <div class="recent-chip">Q4 report deck</div>
+            <div class="recent-chip">Podcast episode</div>
+            <div class="recent-chip">UX teardown doc</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RUNNING VIEW -->
+    <div class="view running-view" id="view-running">
+      <div class="topbar">
+        <div>
+          <div class="run-title">Orchestrating creation…</div>
+          <div class="run-prompt" id="run-prompt">A 10-slide pitch deck for a space tourism startup</div>
+        </div>
+        <div class="tb-actions">
+          <span class="run-timer" id="run-timer">0:00</span>
+          <button class="tb-btn">Pause</button>
+          <button class="tb-btn">Cancel</button>
+        </div>
+      </div>
+
+      <div class="master-progress">
+        <div class="mp-track"><div class="mp-fill" id="mp-fill" style="width:0%"></div></div>
+        <div class="mp-phases">
+          <div class="mp-phase" id="ph-research">Research</div>
+          <div class="mp-phase" id="ph-draft">Draft</div>
+          <div class="mp-phase" id="ph-design">Design</div>
+          <div class="mp-phase" id="ph-render">Render</div>
+        </div>
+      </div>
+
+      <div class="agents-grid">
+        <div class="agent-card" id="agent-researcher">
+          <div class="ac-header">
+            <div class="ac-dot" style="background:#4f8ef7"></div>
+            <div class="ac-name">Researcher</div>
+            <div class="ac-status" id="ares-status">Initializing…</div>
+          </div>
+          <div class="ac-track"><div class="ac-fill" id="ares-bar" style="width:0%;background:#4f8ef7"></div></div>
+          <div class="ac-log" id="ares-log"></div>
+        </div>
+        <div class="agent-card" id="agent-writer">
+          <div class="ac-header">
+            <div class="ac-dot" style="background:#f0c040"></div>
+            <div class="ac-name">Writer</div>
+            <div class="ac-status" id="awri-status">Waiting…</div>
+          </div>
+          <div class="ac-track"><div class="ac-fill" id="awri-bar" style="width:0%;background:#f0c040"></div></div>
+          <div class="ac-log" id="awri-log"></div>
+        </div>
+        <div class="agent-card" id="agent-designer">
+          <div class="ac-header">
+            <div class="ac-dot" style="background:#b49fff"></div>
+            <div class="ac-name">Designer</div>
+            <div class="ac-status" id="ades-status">Waiting…</div>
+          </div>
+          <div class="ac-track"><div class="ac-fill" id="ades-bar" style="width:0%;background:#b49fff"></div></div>
+          <div class="ac-log" id="ades-log"></div>
+        </div>
+        <div class="agent-card" id="agent-producer">
+          <div class="ac-header">
+            <div class="ac-dot" style="background:#7fffd4"></div>
+            <div class="ac-name">Producer</div>
+            <div class="ac-status" id="apro-status">Waiting…</div>
+          </div>
+          <div class="ac-track"><div class="ac-fill" id="apro-bar" style="width:0%;background:#7fffd4"></div></div>
+          <div class="ac-log" id="apro-log"></div>
+        </div>
+      </div>
+
+      <div class="director-log">
+        <div class="dl-label">Director Log</div>
+        <div id="dl-lines"></div>
+      </div>
+    </div>
+
+    <!-- OUTPUTS VIEW -->
+    <div class="view outputs-view" id="view-outputs">
+      <div class="out-summary">
+        <div class="os-top">
+          <div class="os-icon">✦</div>
+          <div>
+            <div class="os-title">Creation Complete</div>
+            <div class="os-prompt" id="out-prompt">A 10-slide pitch deck for a space tourism startup with investor financials and dramatic visuals</div>
+          </div>
+        </div>
+        <div class="os-stats">
+          <div class="os-stat"><strong id="out-time">22s</strong>Total time</div>
+          <div class="os-stat"><strong>4</strong>Agents used</div>
+          <div class="os-stat"><strong>4</strong>Files created</div>
+          <div class="os-stat"><strong id="out-date"></strong>Completed</div>
+        </div>
+      </div>
+
+      <div class="output-files">
+        <div class="of-card fmt-pptx">
+          <div class="of-header">
+            <div class="of-icon">📊</div>
+            <div>
+              <div class="of-name">Pitch Deck</div>
+              <span class="of-format">.pptx</span>
+            </div>
+          </div>
+          <div class="of-desc">10 slides · investor-ready · dark cinematic theme</div>
+          <div class="of-actions">
+            <button class="of-btn primary">Preview</button>
+            <button class="of-btn">Download</button>
+          </div>
+        </div>
+        <div class="of-card fmt-mp4">
+          <div class="of-header">
+            <div class="of-icon">🎬</div>
+            <div>
+              <div class="of-name">Promo Video</div>
+              <span class="of-format">.mp4</span>
+            </div>
+          </div>
+          <div class="of-desc">90s · 4K · cinematic product reel</div>
+          <div class="of-actions">
+            <button class="of-btn primary">Preview</button>
+            <button class="of-btn">Download</button>
+          </div>
+        </div>
+        <div class="of-card fmt-pdf">
+          <div class="of-header">
+            <div class="of-icon">📄</div>
+            <div>
+              <div class="of-name">Financial Model</div>
+              <span class="of-format">.pdf</span>
+            </div>
+          </div>
+          <div class="of-desc">5-year projections · unit economics · charts</div>
+          <div class="of-actions">
+            <button class="of-btn primary">Preview</button>
+            <button class="of-btn">Download</button>
+          </div>
+        </div>
+        <div class="of-card fmt-mp3">
+          <div class="of-header">
+            <div class="of-icon">🎵</div>
+            <div>
+              <div class="of-name">Background Track</div>
+              <span class="of-format">.mp3</span>
+            </div>
+          </div>
+          <div class="of-desc">2:45 · orchestral · presentation-ready</div>
+          <div class="of-actions">
+            <button class="of-btn primary">Preview</button>
+            <button class="of-btn">Download</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="agent-strip">
+        <div class="as-chip"><div class="as-dot" style="background:#4f8ef7"></div><div><div class="as-name">Researcher</div><div class="as-status">Done ✓</div></div></div>
+        <div class="as-chip"><div class="as-dot" style="background:#f0c040"></div><div><div class="as-name">Writer</div><div class="as-status">Done ✓</div></div></div>
+        <div class="as-chip"><div class="as-dot" style="background:#b49fff"></div><div><div class="as-name">Designer</div><div class="as-status">Done ✓</div></div></div>
+        <div class="as-chip"><div class="as-dot" style="background:#7fffd4"></div><div><div class="as-name">Producer</div><div class="as-status">Done ✓</div></div></div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /app -->
+
+<!-- NOTIFICATION -->
+<div class="notif" id="notif">
+  <div class="notif-icon">✦</div>
+  <div>
+    <div class="notif-title">Creation complete</div>
+    <div class="notif-sub" id="notif-sub">4 files ready to download</div>
+  </div>
+</div>
+
+<script>
+// --- Navigation ---
+let currentView = 'create';
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  document.querySelector(`[data-view="${name}"]`)?.classList.add('active');
+  currentView = name;
+}
+document.querySelectorAll('.sb-item[data-view]').forEach(item => {
+  item.addEventListener('click', () => showView(item.dataset.view));
+});
+
+// --- Greeting time ---
+function updateTime() {
+  const now = new Date();
+  const h = now.getHours();
+  const greeting = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+  document.getElementById('cg-time').textContent = `${greeting} · ${now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
+}
+updateTime(); setInterval(updateTime, 10000);
+
+// --- Format chips ---
+document.querySelectorAll('.fmt-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.fmt-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+  });
+});
+
+// --- Char count ---
+const input = document.getElementById('imagine-input');
+input.addEventListener('input', () => {
+  document.getElementById('char-count').textContent = input.value.length + ' chars';
+});
+
+// --- Suggestion clicks ---
+document.querySelectorAll('.sug-item').forEach(s => {
+  s.addEventListener('click', () => {
+    input.value = s.dataset.prompt;
+    input.dispatchEvent(new Event('input'));
+  });
+});
+
+// --- Imagine button ---
+document.getElementById('imagine-btn').addEventListener('click', startImagine);
+
+function startImagine() {
+  const prompt = input.value.trim();
+  if (!prompt) return;
+  document.getElementById('run-prompt').textContent = prompt;
+  document.getElementById('out-prompt').textContent = prompt;
+  showView('running');
+  runOrchestration();
+}
+
+// --- Orchestration simulation ---
+let timerInterval, startTime;
+
+const agentScripts = {
+  researcher: [
+    'Querying industry databases…',
+    'Pulling competitor benchmarks…',
+    'Extracting market size data…',
+    'Synthesizing research brief…',
+  ],
+  writer: [
+    'Drafting slide narratives…',
+    'Writing executive summary…',
+    'Refining hook and CTA…',
+    'Finalizing copy…',
+  ],
+  designer: [
+    'Generating color palette…',
+    'Laying out slide templates…',
+    'Rendering data visualizations…',
+    'Exporting design assets…',
+  ],
+  producer: [
+    'Composing background score…',
+    'Assembling video sequences…',
+    'Encoding final outputs…',
+    'Packaging deliverables…',
+  ],
+};
+
+const directorLines = [
+  'Initializing multi-agent pipeline…',
+  'Dispatching Researcher to gather context…',
+  'Research phase 40% — activating Writer…',
+  'Writer drafting in parallel with Researcher…',
+  'Research complete → handing brief to Designer…',
+  'All three agents converging on design layer…',
+  'Producer composing media assets…',
+  'Rendering pipeline complete — packaging outputs…',
+  'All agents done — finalizing deliverables…',
+];
+
+function addLog(agentId, text) {
+  const el = document.getElementById('a' + agentId + '-log');
+  if (!el) return;
+  const line = document.createElement('div');
+  line.textContent = text;
+  el.appendChild(line);
+  if (el.children.length > 3) el.removeChild(el.children[0]);
+}
+
+function addDirectorLine(text) {
+  const el = document.getElementById('dl-lines');
+  const now = new Date();
+  const time = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+  const line = document.createElement('div');
+  line.className = 'dl-line';
+  line.innerHTML = `<span class="dl-time">${time}</span><span>${text}</span>`;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+
+function setAgentStatus(id, status, isDone) {
+  const el = document.getElementById('a' + id + '-status');
+  if (el) { el.textContent = status; }
+  if (isDone) {
+    document.getElementById('agent-' + id.replace('res','researcher').replace('wri','writer').replace('des','designer').replace('pro','producer'))?.classList.add('done');
+  }
+}
+
+function setPhase(phaseId, state) {
+  const el = document.getElementById('ph-' + phaseId);
+  if (!el) return;
+  el.classList.remove('active', 'done');
+  if (state) el.classList.add(state);
+}
+
+function runOrchestration() {
+  // Reset
+  ['researcher','writer','designer','producer'].forEach(id => {
+    const key = {researcher:'res',writer:'wri',designer:'des',producer:'pro'}[id];
+    document.getElementById('a'+key+'-bar').style.width = '0%';
+    document.getElementById('a'+key+'-log').innerHTML = '';
+    document.getElementById('a'+key+'-status').textContent = 'Waiting…';
+    document.getElementById('agent-'+id)?.classList.remove('done');
+  });
+  document.getElementById('dl-lines').innerHTML = '';
+  document.getElementById('mp-fill').style.width = '0%';
+  ['research','draft','design','render'].forEach(p => setPhase(p, null));
+
+  startTime = Date.now();
+  timerInterval = setInterval(() => {
+    const s = Math.floor((Date.now() - startTime) / 1000);
+    document.getElementById('run-timer').textContent = Math.floor(s/60) + ':' + String(s%60).padStart(2,'0');
+  }, 500);
+
+  const TOTAL = 20000;
+  const schedule = [
+    // [time, fn]
+    [0, () => { addDirectorLine(directorLines[0]); setPhase('research','active'); }],
+    [300, () => { document.getElementById('ares-status').textContent = 'Running'; addLog('res', agentScripts.researcher[0]); }],
+    [1200, () => { document.getElementById('ares-bar').style.width='25%'; document.getElementById('mp-fill').style.width='8%'; addDirectorLine(directorLines[1]); addLog('res', agentScripts.researcher[1]); }],
+    [2400, () => { document.getElementById('ares-bar').style.width='50%'; document.getElementById('mp-fill').style.width='15%'; addLog('res', agentScripts.researcher[2]); }],
+    [3600, () => { addDirectorLine(directorLines[2]); document.getElementById('awri-status').textContent = 'Running'; addLog('wri', agentScripts.writer[0]); setPhase('draft','active'); }],
+    [4200, () => { document.getElementById('ares-bar').style.width='75%'; document.getElementById('awri-bar').style.width='20%'; document.getElementById('mp-fill').style.width='25%'; addDirectorLine(directorLines[3]); addLog('res', agentScripts.researcher[3]); }],
+    [5500, () => { document.getElementById('ares-bar').style.width='100%'; document.getElementById('ares-status').textContent = 'Done ✓'; document.getElementById('agent-researcher').classList.add('done'); addDirectorLine(directorLines[4]); }],
+    [5800, () => { setPhase('research','done'); setPhase('design','active'); document.getElementById('ades-status').textContent = 'Running'; addLog('des', agentScripts.designer[0]); }],
+    [7000, () => { document.getElementById('awri-bar').style.width='50%'; document.getElementById('ades-bar').style.width='25%'; document.getElementById('mp-fill').style.width='42%'; addLog('wri', agentScripts.writer[1]); addDirectorLine(directorLines[5]); }],
+    [9000, () => { document.getElementById('awri-bar').style.width='75%'; document.getElementById('ades-bar').style.width='55%'; document.getElementById('mp-fill').style.width='58%'; addLog('des', agentScripts.designer[1]); addLog('wri', agentScripts.writer[2]); }],
+    [10500, () => { document.getElementById('awri-bar').style.width='100%'; document.getElementById('awri-status').textContent = 'Done ✓'; document.getElementById('agent-writer').classList.add('done'); setPhase('draft','done'); }],
+    [11000, () => { document.getElementById('apro-status').textContent = 'Running'; addLog('pro', agentScripts.producer[0]); addDirectorLine(directorLines[6]); setPhase('render','active'); }],
+    [13000, () => { document.getElementById('ades-bar').style.width='80%'; document.getElementById('apro-bar').style.width='30%'; document.getElementById('mp-fill').style.width='72%'; addLog('des', agentScripts.designer[2]); addLog('pro', agentScripts.producer[1]); }],
+    [15500, () => { document.getElementById('ades-bar').style.width='100%'; document.getElementById('ades-status').textContent = 'Done ✓'; document.getElementById('agent-designer').classList.add('done'); setPhase('design','done'); addDirectorLine(directorLines[7]); addLog('pro', agentScripts.producer[2]); }],
+    [17500, () => { document.getElementById('apro-bar').style.width='70%'; document.getElementById('mp-fill').style.width='85%'; addLog('pro', agentScripts.producer[3]); }],
+    [19000, () => { document.getElementById('apro-bar').style.width='100%'; document.getElementById('apro-status').textContent = 'Done ✓'; document.getElementById('agent-producer').classList.add('done'); setPhase('render','done'); document.getElementById('mp-fill').style.width='100%'; addDirectorLine(directorLines[8]); }],
+    [TOTAL, () => {
+      clearInterval(timerInterval);
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      document.getElementById('out-time').textContent = elapsed + 's';
+      document.getElementById('out-date').textContent = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+      // Show notification
+      const notif = document.getElementById('notif');
+      notif.classList.add('show');
+      setTimeout(() => { notif.classList.remove('show'); showView('outputs'); }, 2500);
+    }],
+  ];
+
+  schedule.forEach(([delay, fn]) => setTimeout(fn, delay));
+}
+
+// Set output date on load
+document.getElementById('out-date').textContent = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+</script>
+</body>
+</html>
